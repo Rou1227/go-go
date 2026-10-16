@@ -611,6 +611,7 @@
       <div class="tab-bar">
         <button class="active" id="tab-tasks" onclick="switchManagerTab('tasks')">任務設定</button>
         <button id="tab-shifts" onclick="switchManagerTab('shifts')">班次管理</button>
+        <button id="tab-stores" onclick="switchManagerTab('stores')">店舖/人員</button>
         <button id="tab-reports" onclick="switchManagerTab('reports')">報表</button>
         <button id="tab-ai" onclick="switchManagerTab('ai')">AI 串接</button>
       </div>
@@ -637,6 +638,20 @@
         </div>
         <div class="section-title">📅 班次列表</div>
         <div id="manager-shift-list"></div>
+      </div>
+
+      <!-- Stores / Staff Tab -->
+      <div id="manager-stores" class="hidden">
+        <div class="section-title">🏪 店舖列表</div>
+        <div class="card">
+          <button class="btn btn-primary btn-block" style="margin-bottom:12px" onclick="openStoreModal()">＋ 新增店舖</button>
+          <div id="manager-store-list"></div>
+        </div>
+        <div class="section-title">👤 人員名單</div>
+        <div class="card">
+          <button class="btn btn-primary btn-block" style="margin-bottom:12px" onclick="openStaffModal()">＋ 新增人員</button>
+          <div id="manager-staff-list"></div>
+        </div>
       </div>
 
       <!-- Reports Tab -->
@@ -668,28 +683,22 @@
         </div>
 
         <div class="card" style="margin-top:12px;">
-          <div class="section-title" style="margin-top:0">🤖 真實 AI 串接說明</div>
+          <div class="section-title" style="margin-top:0">🤖 Google Gemini 真實 AI 設定</div>
           <p style="font-size:0.85rem;line-height:1.5;margin-bottom:10px;">
-            目前原型使用<strong>模擬 AI</strong>（依任務分類給合理回饋）。正式上線時請替換成真實 Vision 模型。
+            填入你的 Gemini API Key 後，上傳照片就會使用真實 AI 判斷。沒有填 Key 時會自動使用模擬 AI。
           </p>
-          <div class="ai-note">
-            <strong>建議串接方式（擇一）：</strong><br><br>
-            1. <strong>OpenAI GPT-4o / GPT-4.1 Vision</strong><br>
-            在 <code>runAICheck()</code> 內把圖片轉 base64 後呼叫：<br>
-            <code>POST https://api.openai.com/v1/chat/completions</code><br>
-            提示詞範例：「你是超商稽核員。請判斷這張照片是否符合任務要求：『{任務名稱}』。只回傳 JSON：{"pass":true/false,"reason":"簡短中文說明"}」<br><br>
-
-            2. <strong>Google Cloud Vision / Gemini</strong><br>
-            使用 Gemini 1.5 Flash 或 Vision API 做類似判斷。<br><br>
-
-            3. <strong>xAI Grok Vision</strong>（若有 API）<br>
-            同樣以多模態對話方式傳圖 + 提示詞。<br><br>
-
-            <strong>安全提醒：</strong> API Key 請放後端，不要寫在前端。正式環境建議用 Firebase / Supabase Edge Functions 或自有後端代理。
+          <div class="form-group">
+            <label>Gemini API Key</label>
+            <input type="password" id="gemini-api-key" placeholder="貼上你的 API Key">
           </div>
-          <p style="font-size:0.8rem;color:var(--muted);margin-top:12px;">
-            目前程式碼中 <code>runAICheck()</code> 與 <code>generateMockAIResult()</code> 可直接替換成真實 API 呼叫。
-          </p>
+          <button class="btn btn-primary btn-block" onclick="saveGeminiKey()">儲存 API Key</button>
+          <div id="gemini-key-msg" style="font-size:0.85rem;margin-top:8px;display:none;"></div>
+          <div class="ai-note" style="margin-top:12px;">
+            <strong>注意：</strong><br>
+            • 此為前端測試用，API Key 會存在瀏覽器中<br>
+            • 只適合自己或少數人測試，不要公開分享網址給大量使用者<br>
+            • 正式多店使用建議改走後端保護 Key
+          </div>
         </div>
       </div>
     </div>
@@ -869,6 +878,7 @@
     let storeList = [{ id: 'default', name: '預設店舖' }];
     let currentStaffId = 'default';
     let staffList = [{ id: 'default', name: '未指定' }];
+    let geminiApiKey = '';
     const DATA_RETENTION_DAYS = 180; // 資料保存 6 個月
 
     // ========== Persistence (multi-store + 6 months retention) ==========
@@ -920,6 +930,7 @@
         history = cleanOldHistory(data.history || []);
         currentShiftId = data.currentShiftId || null;
         if (data.managerPassword) managerPassword = data.managerPassword;
+        if (data.geminiApiKey) geminiApiKey = data.geminiApiKey;
       } else {
         taskTemplates = JSON.parse(JSON.stringify(DEFAULT_TASKS));
         // create default shifts: 早班、晚班、夜班
@@ -939,7 +950,7 @@
       // 自動清除超過 6 個月的歷史資料
       history = cleanOldHistory(history);
       localStorage.setItem(getStoreKey(), JSON.stringify({
-        taskTemplates, shifts, history, currentShiftId, managerPassword
+        taskTemplates, shifts, history, currentShiftId, managerPassword, geminiApiKey
       }));
       saveStoreList();
     }
@@ -1015,11 +1026,17 @@
 
     function switchManagerTab(tab) {
       managerTab = tab;
-      ['tasks','shifts','reports','ai'].forEach(t => {
-        document.getElementById('tab-' + t).classList.toggle('active', t === tab);
-        document.getElementById('manager-' + t).classList.toggle('hidden', t !== tab);
+      ['tasks','shifts','stores','reports','ai'].forEach(t => {
+        const tabBtn = document.getElementById('tab-' + t);
+        const panel = document.getElementById('manager-' + t);
+        if (tabBtn) tabBtn.classList.toggle('active', t === tab);
+        if (panel) panel.classList.toggle('hidden', t !== tab);
       });
       document.getElementById('fab-add').classList.toggle('show', currentRole === 'manager' && tab === 'tasks');
+      if (tab === 'ai') {
+        const keyInput = document.getElementById('gemini-api-key');
+        if (keyInput) keyInput.value = geminiApiKey || '';
+      }
       render();
     }
 
@@ -1121,7 +1138,35 @@
     function renderManager() {
       if (managerTab === 'tasks') renderManagerTasks();
       else if (managerTab === 'shifts') renderManagerShifts();
+      else if (managerTab === 'stores') renderManagerStores();
       else if (managerTab === 'reports') renderReports();
+    }
+
+    function renderManagerStores() {
+      const storeEl = document.getElementById('manager-store-list');
+      const staffEl = document.getElementById('manager-staff-list');
+      if (storeEl) {
+        storeEl.innerHTML = storeList.map(s => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <strong>${escapeHtml(s.name)}</strong>
+              ${s.id === currentStoreId ? '<span class="tag pass" style="margin-left:6px">目前</span>' : ''}
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteStore('${s.id}')" ${storeList.length <= 1 ? 'disabled' : ''}>刪除</button>
+          </div>
+        `).join('') || '<div style="color:var(--muted);padding:10px 0;">尚無店舖</div>';
+      }
+      if (staffEl) {
+        staffEl.innerHTML = staffList.map(s => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <strong>${escapeHtml(s.name)}</strong>
+              ${s.id === currentStaffId ? '<span class="tag pass" style="margin-left:6px">目前</span>' : ''}
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteStaff('${s.id}')" ${staffList.length <= 1 ? 'disabled' : ''}>刪除</button>
+          </div>
+        `).join('') || '<div style="color:var(--muted);padding:10px 0;">尚無人員</div>';
+      }
     }
 
     function renderManagerTasks() {
@@ -1404,7 +1449,7 @@
      *   saveData(); render();
      * }
      */
-    function runAICheck(id) {
+    async function runAICheck(id) {
       const shift = getCurrentShift();
       if (!shift) return;
       const t = shift.tasks.find(x => x.id === id);
@@ -1422,11 +1467,21 @@
           area.appendChild(loading);
         }
         loading.className = 'ai-result show loading';
-        loading.innerHTML = `🤖 AI 正在分析 ${photos.length} 張照片中...`;
+        loading.innerHTML = geminiApiKey
+          ? `🤖 Gemini 真實 AI 正在分析 ${photos.length} 張照片...`
+          : `🤖 模擬 AI 正在分析 ${photos.length} 張照片...`;
       }
 
-      setTimeout(() => {
-        const results = generateMockAIResult(t);
+      try {
+        let results;
+        if (geminiApiKey) {
+          results = await callGeminiAI(t, photos);
+        } else {
+          // fallback to mock
+          await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
+          results = generateMockAIResult(t);
+        }
+
         t.aiStatus = results.status;
         t.aiMessage = results.message + (photos.length > 1 ? `（共檢視 ${photos.length} 張）` : '');
         if (results.status === 'pass') {
@@ -1439,9 +1494,75 @@
         }
         saveData();
         render();
-        // check full complete
         if (shift.tasks.every(x => x.completed)) showPetMessage('complete');
-      }, 1600 + Math.random() * 1400);
+      } catch (err) {
+        console.error('AI 分析失敗:', err);
+        if (card) {
+          const area = card.querySelector('.photo-area');
+          let loading = area.querySelector('.ai-result');
+          if (loading) {
+            loading.className = 'ai-result show fail';
+            loading.innerHTML = '⚠️ AI 分析失敗：' + (err.message || '請檢查 API Key 或網路');
+          }
+        }
+      }
+    }
+
+    async function callGeminiAI(task, photos) {
+      // 最多送 4 張，避免太大
+      const imagesToSend = photos.slice(0, 4);
+      const parts = [
+        {
+          text: `你是超商稽核人員。請根據以下任務要求，判斷這些照片是否合格。
+
+任務名稱：${task.title}
+任務說明：${task.desc || '無'}
+任務分類：${task.category}
+
+請仔細看照片內容，判斷是否符合任務要求。
+只回傳純 JSON，不要其他文字或 markdown：
+{"pass": true或false, "reason": "用繁體中文簡短說明判斷理由"}`
+        }
+      ];
+
+      imagesToSend.forEach(img => {
+        const base64 = img.includes(',') ? img.split(',')[1] : img;
+        parts.push({
+          inline_data: {
+            mime_type: 'image/jpeg',
+            data: base64
+          }
+        });
+      });
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts }]
+          })
+        }
+      );
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error('Gemini API 錯誤 (' + res.status + ')');
+      }
+
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const jsonMatch = text.match(/\{[\s\S]*?\}/);
+      if (!jsonMatch) {
+        // 如果解析失敗，把原文當 reason
+        return { status: 'fail', message: 'AI 回覆無法解析：' + text.slice(0, 80) };
+      }
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        status: parsed.pass ? 'pass' : 'fail',
+        message: parsed.reason || (parsed.pass ? '通過' : '未通過')
+      };
     }
 
     function generateMockAIResult(task) {
@@ -1470,6 +1591,22 @@
       };
       const cat = reasons[task.category] || reasons['其他'];
       return { status: pass ? 'pass' : 'fail', message: pass ? cat.pass : cat.fail };
+    }
+
+    function saveGeminiKey() {
+      const key = document.getElementById('gemini-api-key').value.trim();
+      geminiApiKey = key;
+      saveData();
+      const msg = document.getElementById('gemini-key-msg');
+      msg.style.display = 'block';
+      if (key) {
+        msg.style.color = 'var(--success)';
+        msg.textContent = '✅ API Key 已儲存，現在上傳照片會使用真實 Gemini AI';
+      } else {
+        msg.style.color = 'var(--muted)';
+        msg.textContent = '已清除 API Key，將使用模擬 AI';
+      }
+      setTimeout(() => { msg.style.display = 'none'; }, 4000);
     }
 
     // ========== Manager Actions ==========
@@ -1635,18 +1772,19 @@
       const sel = document.getElementById('store-select');
       if (!sel) return;
       sel.innerHTML = storeList.map(s =>
-        `<option value="${s.id}" ${s.id === currentStoreId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`
+        `<option value="${s.id}" ${s.id === currentStoreId ? 'selected' : ''}>🏪 ${escapeHtml(s.name)}</option>`
       ).join('');
     }
 
     function switchStore(storeId) {
-      if (storeId === currentStoreId) return;
+      if (!storeId || storeId === currentStoreId) return;
       saveData(); // save current before switch
       currentStoreId = storeId;
       managerUnlocked = false;
       currentRole = 'staff';
       loadData();
       renderStoreSelect();
+      renderStaffSelect();
       switchRole('staff');
       showPetMessage('start');
     }
@@ -1667,7 +1805,7 @@
       const code = document.getElementById('store-code').value.trim();
       const id = code || ('store_' + Date.now());
       if (storeList.find(s => s.id === id)) {
-        alert('此店舖代碼已存在');
+        alert('此店舖代碼已存在，請換一個');
         return;
       }
       storeList.push({ id, name });
@@ -1676,15 +1814,37 @@
       switchStore(id);
     }
 
+    function deleteStore(storeId) {
+      if (storeList.length <= 1) {
+        alert('至少要保留一間店舖');
+        return;
+      }
+      const s = storeList.find(x => x.id === storeId);
+      if (!s) return;
+      if (!confirm(`確定要刪除「${s.name}」嗎？此店的任務與歷史資料也會一併清除。`)) return;
+
+      // 清除該店資料
+      localStorage.removeItem('cs_app_v2_' + storeId);
+      storeList = storeList.filter(x => x.id !== storeId);
+      if (currentStoreId === storeId) {
+        currentStoreId = storeList[0].id;
+        loadData();
+      }
+      saveStoreList();
+      renderStoreSelect();
+      render();
+    }
+
     function renderStaffSelect() {
       const sel = document.getElementById('staff-select');
       if (!sel) return;
       sel.innerHTML = staffList.map(s =>
-        `<option value="${s.id}" ${s.id === currentStaffId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`
+        `<option value="${s.id}" ${s.id === currentStaffId ? 'selected' : ''}>👤 ${escapeHtml(s.name)}</option>`
       ).join('');
     }
 
     function switchStaff(staffId) {
+      if (!staffId) return;
       currentStaffId = staffId;
       saveStoreList();
       renderStaffSelect();
@@ -1702,12 +1862,35 @@
     function saveNewStaff() {
       const name = document.getElementById('staff-name').value.trim();
       if (!name) { alert('請輸入姓名'); return; }
+      // 避免重複姓名
+      if (staffList.find(s => s.name === name)) {
+        alert('已有相同姓名，請換一個或直接選擇');
+        return;
+      }
       const id = 'staff_' + Date.now();
       staffList.push({ id, name });
       currentStaffId = id;
       saveStoreList();
       closeStaffModal();
       renderStaffSelect();
+    }
+
+    function deleteStaff(staffId) {
+      if (staffList.length <= 1) {
+        alert('至少要保留一位人員');
+        return;
+      }
+      const s = staffList.find(x => x.id === staffId);
+      if (!s) return;
+      if (!confirm(`確定要刪除「${s.name}」嗎？`)) return;
+
+      staffList = staffList.filter(x => x.id !== staffId);
+      if (currentStaffId === staffId) {
+        currentStaffId = staffList[0].id;
+      }
+      saveStoreList();
+      renderStaffSelect();
+      render();
     }
 
     function getCurrentStaffName() {
