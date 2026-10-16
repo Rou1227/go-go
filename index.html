@@ -1,0 +1,1990 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>超商工作完成度 App</title>
+  <style>
+    :root {
+      --primary: #00a651;
+      --primary-dark: #008c44;
+      --danger: #e53935;
+      --warning: #fb8c00;
+      --success: #43a047;
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --text: #1a1a1a;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: 100px;
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 14px 16px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+
+    .header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header .sub {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      margin-top: 1px;
+    }
+
+    .role-switch {
+      display: flex;
+      background: rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 3px;
+      margin-top: 10px;
+    }
+
+    .role-switch button {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: white;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .role-switch button.active {
+      background: white;
+      color: var(--primary);
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid var(--border);
+    }
+
+    .progress-card {
+      background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+      border: none;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .progress-percent {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+    }
+
+    .progress-bar {
+      height: 10px;
+      background: rgba(0,0,0,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 16px 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .task-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .task-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .task-checkbox {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .task-info { flex: 1; }
+
+    .task-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .task-desc {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .task-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 5px;
+    }
+
+    .tag {
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: #e8f5e9;
+      color: var(--primary-dark);
+      font-weight: 500;
+    }
+
+    .tag.photo { background: #e3f2fd; color: #1565c0; }
+    .tag.anomaly { background: #ffebee; color: var(--danger); }
+    .tag.pass { background: #e8f5e9; color: var(--success); }
+
+    .photo-area { margin-left: 30px; margin-top: 2px; }
+
+    .photo-preview {
+      width: 100%;
+      max-width: 240px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-top: 6px;
+      display: none;
+    }
+    .photo-preview.show { display: block; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 9px 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover, .btn-primary:active { background: var(--primary-dark); }
+    .btn-outline { background: white; color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+    .btn-block { width: 100%; }
+
+    .ai-result {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .ai-result.show { display: block; }
+    .ai-result.pass { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .ai-result.fail { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    .ai-result.loading { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 3px;
+      color: var(--muted);
+    }
+    .form-group input[type="text"],
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    .form-group textarea { min-height: 60px; resize: vertical; }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      outline: none; border-color: var(--primary);
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .checkbox-row input { width: 17px; height: 17px; accent-color: var(--primary); }
+
+    .task-actions { display: flex; gap: 6px; margin-top: 6px; }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 2.2rem; margin-bottom: 6px; }
+
+    .fab {
+      position: fixed;
+      bottom: 88px;
+      right: 16px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 14px rgba(0,166,81,0.4);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+    .fab.show { display: flex; }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+
+    .modal {
+      background: white;
+      width: 100%;
+      max-width: 640px;
+      border-radius: 16px 16px 0 0;
+      padding: 18px;
+      max-height: 85vh;
+      overflow-y: auto;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .modal-header h2 { font-size: 1.1rem; }
+    .close-btn {
+      background: none; border: none; font-size: 1.4rem;
+      cursor: pointer; color: var(--muted); line-height: 1;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .stat-box {
+      background: white;
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .stat-box .num {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+    }
+    .stat-box .label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .hidden { display: none !important; }
+
+    .file-input-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 12px;
+      background: #e3f2fd;
+      color: #1565c0;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .file-input-label input { display: none; }
+
+    /* Shift selector */
+    .shift-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-bottom: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .shift-chip {
+      flex-shrink: 0;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1.5px solid var(--border);
+      background: white;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .shift-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .shift-chip.add {
+      border-style: dashed;
+      color: var(--muted);
+    }
+
+    /* Tabs for manager */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+      background: #eef2f6;
+      padding: 3px;
+      border-radius: 10px;
+    }
+    .tab-bar button {
+      flex: 1;
+      border: none;
+      background: transparent;
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .tab-bar button.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    /* Report cards */
+    .report-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .report-item {
+      background: white;
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .report-item .big {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+    }
+    .report-item .lbl {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+    .history-item:last-child { border-bottom: none; }
+
+    /* Pet */
+    .pet-container {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      z-index: 40;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      max-width: calc(100% - 90px);
+      pointer-events: none;
+    }
+    .pet {
+      font-size: 2.8rem;
+      line-height: 1;
+      transition: transform 0.3s;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+      animation: pet-bounce 2.5s ease-in-out infinite;
+    }
+    @keyframes pet-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    .pet.happy { animation: pet-happy 0.6s ease; }
+    @keyframes pet-happy {
+      0% { transform: scale(1); }
+      30% { transform: scale(1.25) rotate(-8deg); }
+      60% { transform: scale(1.15) rotate(8deg); }
+      100% { transform: scale(1); }
+    }
+    .pet.sad { animation: pet-sad 0.5s ease; }
+    @keyframes pet-sad {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(4px); }
+    }
+    .pet-bubble {
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      max-width: 200px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      position: relative;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.3s;
+    }
+    .pet-bubble.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .pet-bubble::after {
+      content: '';
+      position: absolute;
+      left: -6px;
+      bottom: 12px;
+      width: 10px;
+      height: 10px;
+      background: white;
+      border-left: 1.5px solid var(--border);
+      border-bottom: 1.5px solid var(--border);
+      transform: rotate(45deg);
+    }
+
+    .ai-note {
+      font-size: 0.75rem;
+      color: var(--muted);
+      background: #f0f4f8;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+    .ai-note code {
+      background: #e2e8f0;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 0.7rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏪 超商工作完成度</h1>
+    <div class="sub">任務追蹤 · 照片 AI 檢視 · 多店共用 · 資料保存6個月</div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+      <button type="button" id="store-btn" onclick="toggleStorePicker()" style="flex:1;padding:12px 14px;border-radius:10px;border:none;font-size:0.95rem;font-weight:600;background:#ffffff;color:#1a1a1a;text-align:left;min-height:44px;cursor:pointer;">
+        🏪 預設店舖
+      </button>
+      <button type="button" onclick="openStoreModal()" style="background:rgba(255,255,255,0.35);border:none;color:white;padding:12px 14px;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;flex-shrink:0;min-height:44px;">＋店</button>
+    </div>
+    <div id="store-picker" style="display:none;background:#fff;border-radius:10px;margin-top:4px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.18);max-height:220px;overflow-y:auto;"></div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+      <button type="button" id="staff-btn" onclick="toggleStaffPicker()" style="flex:1;padding:12px 14px;border-radius:10px;border:none;font-size:0.95rem;font-weight:600;background:#ffffff;color:#1a1a1a;text-align:left;min-height:44px;cursor:pointer;">
+        👤 未指定
+      </button>
+      <button type="button" onclick="openStaffModal()" style="background:rgba(255,255,255,0.35);border:none;color:white;padding:12px 14px;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;flex-shrink:0;min-height:44px;">＋人</button>
+    </div>
+    <div id="staff-picker" style="display:none;background:#fff;border-radius:10px;margin-top:4px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.18);max-height:220px;overflow-y:auto;"></div>
+    <div class="role-switch">
+      <button id="btn-staff" class="active" onclick="switchRole('staff')">夥伴模式</button>
+      <button id="btn-manager" onclick="tryEnterManager()">管理者模式</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- ===== Staff View ===== -->
+    <div id="staff-view">
+      <div class="shift-bar" id="shift-bar"></div>
+
+      <div class="card progress-card">
+        <div class="progress-header">
+          <div>
+            <div style="font-size:0.8rem;color:#2e7d32;" id="shift-label">目前班次完成度</div>
+            <div class="progress-percent" id="progress-percent">0%</div>
+          </div>
+          <div style="text-align:right;font-size:0.8rem;color:#2e7d32;">
+            <span id="done-count">0</span> / <span id="total-count">0</span> 項
+          </div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="num" id="stat-pass">0</div>
+            <div class="label">照片通過</div>
+          </div>
+          <div class="stat-box">
+            <div class="num" id="stat-fail" style="color:var(--danger)">0</div>
+            <div class="label">異常待處理</div>
+          </div>
+          <div class="stat-box">
+            <div class="num" id="stat-photo">0</div>
+            <div class="label">需拍照任務</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">📋 本班任務清單</div>
+      <div id="staff-task-list"></div>
+    </div>
+
+    <!-- ===== Manager View ===== -->
+    <div id="manager-view" class="hidden">
+      <div class="tab-bar">
+        <button class="active" id="tab-tasks" onclick="switchManagerTab('tasks')">任務設定</button>
+        <button id="tab-shifts" onclick="switchManagerTab('shifts')">班次管理</button>
+        <button id="tab-stores" onclick="switchManagerTab('stores')">店舖/人員</button>
+        <button id="tab-reports" onclick="switchManagerTab('reports')">報表</button>
+        <button id="tab-ai" onclick="switchManagerTab('ai')">AI 串接</button>
+      </div>
+
+      <!-- Tasks Tab -->
+      <div id="manager-tasks">
+        <div class="card">
+          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px;">
+            管理者可新增、編輯、刪除任務模板。需拍照的任務會在夥伴提交後進行 AI 異常檢視。
+          </p>
+          <button class="btn btn-primary btn-block" onclick="openAddModal()">＋ 新增任務</button>
+        </div>
+        <div class="section-title">📝 任務模板列表</div>
+        <div id="manager-task-list"></div>
+      </div>
+
+      <!-- Shifts Tab -->
+      <div id="manager-shifts" class="hidden">
+        <div class="card">
+          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:10px;">
+            管理班次。夥伴可切換班次並獨立記錄完成狀態。結束班次後會自動存入歷史報表。
+          </p>
+          <button class="btn btn-primary btn-block" onclick="openShiftModal()">＋ 新增班次</button>
+        </div>
+        <div class="section-title">📅 班次列表</div>
+        <div id="manager-shift-list"></div>
+      </div>
+
+      <!-- Stores / Staff Tab -->
+      <div id="manager-stores" class="hidden">
+        <div class="section-title">🏪 店舖列表</div>
+        <div class="card">
+          <button class="btn btn-primary btn-block" style="margin-bottom:12px" onclick="openStoreModal()">＋ 新增店舖</button>
+          <div id="manager-store-list"></div>
+        </div>
+        <div class="section-title">👤 人員名單</div>
+        <div class="card">
+          <button class="btn btn-primary btn-block" style="margin-bottom:12px" onclick="openStaffModal()">＋ 新增人員</button>
+          <div id="manager-staff-list"></div>
+        </div>
+      </div>
+
+      <!-- Reports Tab -->
+      <div id="manager-reports" class="hidden">
+        <div class="section-title">📊 總覽統計</div>
+        <div class="report-grid" id="report-summary"></div>
+        <div class="section-title">📜 歷史班次紀錄</div>
+        <div class="card" id="report-history"></div>
+      </div>
+
+      <!-- AI Tab -->
+      <div id="manager-ai" class="hidden">
+        <div class="card">
+          <div class="section-title" style="margin-top:0">🔒 修改管理者密碼</div>
+          <div class="form-group">
+            <label>目前密碼</label>
+            <input type="password" id="old-password" placeholder="輸入目前密碼">
+          </div>
+          <div class="form-group">
+            <label>新密碼</label>
+            <input type="password" id="new-password" placeholder="輸入新密碼（至少 4 碼）">
+          </div>
+          <div class="form-group">
+            <label>確認新密碼</label>
+            <input type="password" id="confirm-password" placeholder="再輸入一次新密碼">
+          </div>
+          <button class="btn btn-primary btn-block" onclick="changePassword()">更新密碼</button>
+          <div id="pw-change-msg" style="font-size:0.85rem;margin-top:8px;display:none;"></div>
+        </div>
+
+        <div class="card" style="margin-top:12px;">
+          <div class="section-title" style="margin-top:0">🤖 Google Gemini 真實 AI 設定</div>
+          <p style="font-size:0.85rem;line-height:1.5;margin-bottom:10px;">
+            填入你的 Gemini API Key 後，上傳照片就會使用真實 AI 判斷。沒有填 Key 時會自動使用模擬 AI。
+          </p>
+          <div class="form-group">
+            <label>Gemini API Key</label>
+            <input type="password" id="gemini-api-key" placeholder="貼上你的 API Key">
+          </div>
+          <button class="btn btn-primary btn-block" onclick="saveGeminiKey()">儲存 API Key</button>
+          <div id="gemini-key-msg" style="font-size:0.85rem;margin-top:8px;display:none;"></div>
+          <div class="ai-note" style="margin-top:12px;">
+            <strong>注意：</strong><br>
+            • 此為前端測試用，API Key 會存在瀏覽器中<br>
+            • 只適合自己或少數人測試，不要公開分享網址給大量使用者<br>
+            • 正式多店使用建議改走後端保護 Key
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="fab-add" onclick="openAddModal()">＋</button>
+
+  <!-- Pet -->
+  <div class="pet-container">
+    <div class="pet" id="pet">🐱</div>
+    <div class="pet-bubble" id="pet-bubble">加油！一起把今天的任務完成吧～</div>
+  </div>
+
+  <!-- Add/Edit Task Modal -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">新增任務</h2>
+        <button class="close-btn" onclick="closeModal()">×</button>
+      </div>
+      <div class="form-group">
+        <label>任務名稱 *</label>
+        <input type="text" id="task-title" placeholder="例如：冷藏櫃溫度檢查">
+      </div>
+      <div class="form-group">
+        <label>說明</label>
+        <textarea id="task-desc" placeholder="詳細說明要檢查或完成的內容..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>分類</label>
+        <select id="task-category">
+          <option value="開店">開店檢查</option>
+          <option value="補貨">補貨／陳列</option>
+          <option value="清潔">清潔</option>
+          <option value="打烊">打烊流程</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="task-require-photo">
+        <label for="task-require-photo" style="margin:0;font-weight:500;">此任務需上傳照片，並進行 AI 自動異常檢視</label>
+      </div>
+      <div style="margin-top:18px;display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveTask()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shift Modal -->
+  <div class="modal-overlay" id="shift-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>新增班次</h2>
+        <button class="close-btn" onclick="closeShiftModal()">×</button>
+      </div>
+      <div class="form-group">
+        <label>班次名稱 *</label>
+        <input type="text" id="shift-name" placeholder="例如：10/15 早班">
+      </div>
+      <div class="form-group">
+        <label>日期</label>
+        <input type="date" id="shift-date">
+      </div>
+      <div style="margin-top:18px;display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closeShiftModal()">取消</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveShift()">建立</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Store Modal -->
+  <div class="modal-overlay" id="store-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>新增店舖</h2>
+        <button class="close-btn" onclick="closeStoreModal()">×</button>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">
+        每間店的資料獨立保存，可在上方切換。資料自動保留 6 個月。
+      </p>
+      <div class="form-group">
+        <label>店舖名稱 *</label>
+        <input type="text" id="store-name" placeholder="例如：中壢中正店">
+      </div>
+      <div class="form-group">
+        <label>店舖代碼（選填，方便識別）</label>
+        <input type="text" id="store-code" placeholder="例如：TY-001">
+      </div>
+      <div style="margin-top:18px;display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closeStoreModal()">取消</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveNewStore()">建立</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Staff Modal -->
+  <div class="modal-overlay" id="staff-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>新增人員</h2>
+        <button class="close-btn" onclick="closeStaffModal()">×</button>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">
+        新增夥伴名單，完成任務時會記錄是誰操作的。
+      </p>
+      <div class="form-group">
+        <label>姓名 *</label>
+        <input type="text" id="staff-name" placeholder="例如：小明">
+      </div>
+      <div style="margin-top:18px;display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closeStaffModal()">取消</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveNewStaff()">建立</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Modal -->
+  <div class="modal-overlay" id="password-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>管理者驗證</h2>
+        <button class="close-btn" onclick="closePasswordModal()">×</button>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">
+        請輸入管理者密碼才能進入設定與報表功能。
+      </p>
+      <div class="form-group">
+        <label>密碼</label>
+        <input type="password" id="manager-password" placeholder="請輸入密碼" autocomplete="current-password">
+      </div>
+      <div id="password-error" style="color:var(--danger);font-size:0.85rem;margin-bottom:10px;display:none;">
+        密碼錯誤，請再試一次
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closePasswordModal()">取消</button>
+        <button class="btn btn-primary" style="flex:1" onclick="verifyPassword()">確認</button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:14px;text-align:center;">
+        預設密碼：<strong>admin123</strong>（進入後可在「AI 串接」分頁修改）
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ========== Default Data ==========
+    const DEFAULT_TASKS = [
+      { id: 't1', title: '冷藏／冷凍櫃溫度檢查', desc: '確認各冷藏櫃與冷凍櫃溫度在標準範圍內，並拍照記錄溫度顯示。', category: '開店', requirePhoto: true },
+      { id: 't2', title: '貨架補貨與陳列整理', desc: '檢查熱銷商品是否缺貨，整理陳列面朝前、價格標籤正確。', category: '補貨', requirePhoto: true },
+      { id: 't3', title: '地板與走道清潔', desc: '拖地並確認走道無障礙物、無濕滑。', category: '清潔', requirePhoto: true },
+      { id: 't4', title: '廁所清潔與補充耗材', desc: '清潔馬桶、洗手台，補充衛生紙與洗手乳。', category: '清潔', requirePhoto: false },
+      { id: 't5', title: '收銀機與找零準備', desc: '確認收銀機可正常運作，準備足夠零錢。', category: '開店', requirePhoto: false },
+      { id: 't6', title: '打烊清點與關門檢查', desc: '清點現金、關閉設備、確認門窗上鎖。', category: '打烊', requirePhoto: true }
+    ];
+
+    const PET_MESSAGES = {
+      start: ['加油！一起把今天的任務完成吧～', '我在這裡陪你，慢慢來就好！', '新的一天，我們一起努力！'],
+      progress: ['做得好！繼續保持！', '你很棒，又完成一項了！', '進度不錯喔，加油加油！'],
+      almost: ['快完成了！再撐一下！', '只剩一點點，你一定可以！', '終點就在眼前～'],
+      complete: ['太強了！！今天全部完成！', '完美！你是最棒的夥伴！', '全部搞定！休息一下吧～'],
+      fail: ['沒關係，再拍一次就好！', '小問題而已，我們可以解決！', '異常不可怕，處理掉就行！'],
+      pass: ['AI 說通過了！讚讚讚！', '照片很漂亮，檢查合格！', '完美通過，繼續下一個！']
+    };
+
+    // State
+    let taskTemplates = [];          // global templates
+    let shifts = [];                 // [{id, name, date, tasks: [{...completion state}], finished: bool}]
+    let currentShiftId = null;
+    let history = [];                // finished shifts snapshot
+    let currentRole = 'staff';
+    let editingId = null;
+    let managerTab = 'tasks';
+    let managerUnlocked = false;     // session unlock
+    let managerPassword = 'admin123'; // default, can be changed
+    let currentStoreId = 'default';   // multi-store support
+    let storeList = [{ id: 'default', name: '預設店舖' }];
+    let currentStaffId = 'default';
+    let staffList = [{ id: 'default', name: '未指定' }];
+    let geminiApiKey = '';
+    const DATA_RETENTION_DAYS = 180; // 資料保存 6 個月
+
+    // ========== Persistence (multi-store + 6 months retention) ==========
+    function getStoreKey() {
+      return 'cs_app_v2_' + currentStoreId;
+    }
+
+    function cleanOldHistory(hist) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - DATA_RETENTION_DAYS);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      return (hist || []).filter(h => h.date >= cutoffStr);
+    }
+
+    function loadStoreList() {
+      const saved = localStorage.getItem('cs_store_list');
+      if (saved) {
+        storeList = JSON.parse(saved);
+      }
+      const lastStore = localStorage.getItem('cs_current_store');
+      if (lastStore && storeList.find(s => s.id === lastStore)) {
+        currentStoreId = lastStore;
+      }
+      // staff list
+      const savedStaff = localStorage.getItem('cs_staff_list');
+      if (savedStaff) {
+        staffList = JSON.parse(savedStaff);
+      }
+      const lastStaff = localStorage.getItem('cs_current_staff');
+      if (lastStaff && staffList.find(s => s.id === lastStaff)) {
+        currentStaffId = lastStaff;
+      }
+    }
+
+    function saveStoreList() {
+      localStorage.setItem('cs_store_list', JSON.stringify(storeList));
+      localStorage.setItem('cs_current_store', currentStoreId);
+      localStorage.setItem('cs_staff_list', JSON.stringify(staffList));
+      localStorage.setItem('cs_current_staff', currentStaffId);
+    }
+
+    function loadData() {
+      loadStoreList();
+      const saved = localStorage.getItem(getStoreKey());
+      if (saved) {
+        const data = JSON.parse(saved);
+        taskTemplates = data.taskTemplates || [];
+        shifts = data.shifts || [];
+        history = cleanOldHistory(data.history || []);
+        currentShiftId = data.currentShiftId || null;
+        if (data.managerPassword) managerPassword = data.managerPassword;
+        if (data.geminiApiKey) geminiApiKey = data.geminiApiKey;
+      } else {
+        taskTemplates = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+        // create default shifts: 早班、晚班、夜班
+        const today = new Date().toISOString().slice(0,10);
+        const morning = createShiftObject('早班', today);
+        const evening = createShiftObject('晚班', today);
+        const night = createShiftObject('夜班', today);
+        shifts.push(morning, evening, night);
+        currentShiftId = morning.id;
+        history = [];
+        saveData();
+      }
+      if (!currentShiftId && shifts.length) currentShiftId = shifts[0].id;
+    }
+
+    function saveData() {
+      // 自動清除超過 6 個月的歷史資料
+      history = cleanOldHistory(history);
+      localStorage.setItem(getStoreKey(), JSON.stringify({
+        taskTemplates, shifts, history, currentShiftId, managerPassword, geminiApiKey
+      }));
+      saveStoreList();
+    }
+
+    function createShiftObject(name, date) {
+      return {
+        id: 's' + Date.now() + Math.random().toString(36).slice(2,6),
+        name,
+        date,
+        finished: false,
+        tasks: taskTemplates.map(t => ({
+          ...t,
+          completed: false,
+          photos: [],
+          aiStatus: null,
+          aiMessage: ''
+        }))
+      };
+    }
+
+    function getCurrentShift() {
+      return shifts.find(s => s.id === currentShiftId);
+    }
+
+    // ========== Role / Tab ==========
+    function tryEnterManager() {
+      if (managerUnlocked) {
+        switchRole('manager');
+        return;
+      }
+      document.getElementById('manager-password').value = '';
+      document.getElementById('password-error').style.display = 'none';
+      document.getElementById('password-modal').classList.add('show');
+      setTimeout(() => document.getElementById('manager-password').focus(), 100);
+    }
+
+    function closePasswordModal() {
+      document.getElementById('password-modal').classList.remove('show');
+    }
+
+    function verifyPassword() {
+      const input = document.getElementById('manager-password').value;
+      if (input === managerPassword) {
+        managerUnlocked = true;
+        closePasswordModal();
+        switchRole('manager');
+      } else {
+        document.getElementById('password-error').style.display = 'block';
+        document.getElementById('manager-password').value = '';
+        document.getElementById('manager-password').focus();
+      }
+    }
+
+    // Allow Enter key to submit password
+    document.addEventListener('DOMContentLoaded', () => {
+      const pwInput = document.getElementById('manager-password');
+      if (pwInput) {
+        pwInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') verifyPassword();
+        });
+      }
+    });
+
+    function switchRole(role) {
+      currentRole = role;
+      document.getElementById('btn-staff').classList.toggle('active', role === 'staff');
+      document.getElementById('btn-manager').classList.toggle('active', role === 'manager');
+      document.getElementById('staff-view').classList.toggle('hidden', role !== 'staff');
+      document.getElementById('manager-view').classList.toggle('hidden', role !== 'manager');
+      document.getElementById('fab-add').classList.toggle('show', role === 'manager' && managerTab === 'tasks');
+      render();
+    }
+
+    function switchManagerTab(tab) {
+      managerTab = tab;
+      ['tasks','shifts','stores','reports','ai'].forEach(t => {
+        const tabBtn = document.getElementById('tab-' + t);
+        const panel = document.getElementById('manager-' + t);
+        if (tabBtn) tabBtn.classList.toggle('active', t === tab);
+        if (panel) panel.classList.toggle('hidden', t !== tab);
+      });
+      document.getElementById('fab-add').classList.toggle('show', currentRole === 'manager' && tab === 'tasks');
+      if (tab === 'ai') {
+        const keyInput = document.getElementById('gemini-api-key');
+        if (keyInput) keyInput.value = geminiApiKey || '';
+      }
+      render();
+    }
+
+    // ========== Render ==========
+    function render() {
+      if (currentRole === 'staff') renderStaff();
+      else renderManager();
+      updatePet();
+    }
+
+    function renderStaff() {
+      renderShiftBar();
+      const shift = getCurrentShift();
+      const list = document.getElementById('staff-task-list');
+
+      if (!shift) {
+        list.innerHTML = `<div class="empty-state"><div class="icon">📭</div>目前沒有班次<br>請管理者先建立班次</div>`;
+        updateProgress(null);
+        return;
+      }
+
+      document.getElementById('shift-label').textContent = shift.name + ' 完成度';
+
+      if (shift.tasks.length === 0) {
+        list.innerHTML = `<div class="empty-state"><div class="icon">📭</div>此班次沒有任務</div>`;
+        updateProgress(shift);
+        return;
+      }
+
+      list.innerHTML = shift.tasks.map(t => {
+        const photoRequired = t.requirePhoto;
+        // support both old single photoData and new photos array
+        const photos = Array.isArray(t.photos) ? t.photos : (t.photoData ? [t.photoData] : []);
+        const hasPhoto = photos.length > 0;
+        let aiHtml = '';
+        if (photoRequired && t.aiStatus) {
+          const cls = t.aiStatus === 'pass' ? 'pass' : 'fail';
+          const icon = t.aiStatus === 'pass' ? '✅' : '⚠️';
+          aiHtml = `<div class="ai-result show ${cls}">${icon} ${t.aiMessage}</div>`;
+        }
+
+        const photoPreviews = photos.map((src, idx) =>
+          `<div style="position:relative;display:inline-block;margin:4px 4px 0 0;">
+            <img class="photo-preview show" src="${src}" alt="照片${idx+1}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;">
+            <button onclick="removePhoto('${t.id}',${idx})" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#e53935;color:white;border:none;font-size:12px;cursor:pointer;line-height:1;">×</button>
+          </div>`
+        ).join('');
+
+        return `
+          <div class="card task-item" data-id="${t.id}">
+            <div class="task-top">
+              <input type="checkbox" class="task-checkbox" ${t.completed ? 'checked' : ''}
+                     onchange="toggleComplete('${t.id}', this.checked)"
+                     ${photoRequired && !hasPhoto ? 'disabled' : ''}>
+              <div class="task-info">
+                <div class="task-title">${escapeHtml(t.title)}</div>
+                <div class="task-desc">${escapeHtml(t.desc || '')}</div>
+                <div class="task-tags">
+                  <span class="tag">${t.category}</span>
+                  ${photoRequired ? '<span class="tag photo">📷 需拍照</span>' : ''}
+                  ${hasPhoto ? `<span class="tag photo">${photos.length} 張照片</span>` : ''}
+                  ${t.aiStatus === 'pass' ? '<span class="tag pass">AI 通過</span>' : ''}
+                  ${t.aiStatus === 'fail' ? '<span class="tag anomaly">AI 異常</span>' : ''}
+                </div>
+              </div>
+            </div>
+            ${photoRequired ? `
+              <div class="photo-area">
+                <label class="file-input-label">
+                  📷 ${hasPhoto ? '繼續新增照片' : '上傳照片（可從相簿選多張）'}
+                  <input type="file" accept="image/*" multiple onchange="handlePhoto('${t.id}', this)">
+                </label>
+                <div style="margin-top:6px;">${photoPreviews}</div>
+                ${aiHtml}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      updateProgress(shift);
+    }
+
+    function renderShiftBar() {
+      const bar = document.getElementById('shift-bar');
+      if (shifts.length === 0) {
+        bar.innerHTML = '';
+        return;
+      }
+      bar.innerHTML = shifts.filter(s => !s.finished).map(s => `
+        <div class="shift-chip ${s.id === currentShiftId ? 'active' : ''}" onclick="selectShift('${s.id}')">
+          ${escapeHtml(s.name)}
+        </div>
+      `).join('') + `
+        <div class="shift-chip add" onclick="openShiftModal()">＋ 新班次</div>
+      `;
+    }
+
+    function renderManager() {
+      if (managerTab === 'tasks') renderManagerTasks();
+      else if (managerTab === 'shifts') renderManagerShifts();
+      else if (managerTab === 'stores') renderManagerStores();
+      else if (managerTab === 'reports') renderReports();
+    }
+
+    function renderManagerStores() {
+      const storeEl = document.getElementById('manager-store-list');
+      const staffEl = document.getElementById('manager-staff-list');
+      if (storeEl) {
+        storeEl.innerHTML = storeList.map(s => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <strong>${escapeHtml(s.name)}</strong>
+              ${s.id === currentStoreId ? '<span class="tag pass" style="margin-left:6px">目前</span>' : ''}
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteStore('${s.id}')" ${storeList.length <= 1 ? 'disabled' : ''}>刪除</button>
+          </div>
+        `).join('') || '<div style="color:var(--muted);padding:10px 0;">尚無店舖</div>';
+      }
+      if (staffEl) {
+        staffEl.innerHTML = staffList.map(s => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);">
+            <div>
+              <strong>${escapeHtml(s.name)}</strong>
+              ${s.id === currentStaffId ? '<span class="tag pass" style="margin-left:6px">目前</span>' : ''}
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteStaff('${s.id}')" ${staffList.length <= 1 ? 'disabled' : ''}>刪除</button>
+          </div>
+        `).join('') || '<div style="color:var(--muted);padding:10px 0;">尚無人員</div>';
+      }
+    }
+
+    function renderManagerTasks() {
+      const list = document.getElementById('manager-task-list');
+      if (taskTemplates.length === 0) {
+        list.innerHTML = `<div class="empty-state"><div class="icon">📝</div>尚未設定任何任務</div>`;
+        return;
+      }
+      list.innerHTML = taskTemplates.map(t => `
+        <div class="card">
+          <div class="task-title">${escapeHtml(t.title)}</div>
+          <div class="task-desc">${escapeHtml(t.desc || '（無說明）')}</div>
+          <div class="task-tags" style="margin-top:6px">
+            <span class="tag">${t.category}</span>
+            ${t.requirePhoto ? '<span class="tag photo">📷 需拍照 + AI 檢視</span>' : '<span class="tag">免拍照</span>'}
+          </div>
+          <div class="task-actions">
+            <button class="btn btn-outline btn-sm" onclick="editTask('${t.id}')">編輯</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteTask('${t.id}')">刪除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderManagerShifts() {
+      const list = document.getElementById('manager-shift-list');
+      if (shifts.length === 0) {
+        list.innerHTML = `<div class="empty-state"><div class="icon">📅</div>尚未建立班次</div>`;
+        return;
+      }
+      list.innerHTML = shifts.map(s => {
+        const done = s.tasks.filter(t => t.completed).length;
+        const total = s.tasks.length;
+        const pct = total ? Math.round(done/total*100) : 0;
+        return `
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div class="task-title">${escapeHtml(s.name)}</div>
+                <div class="task-desc">${s.date} · ${done}/${total} 完成 (${pct}%)</div>
+              </div>
+              <div>
+                ${s.finished
+                  ? '<span class="tag pass">已結束</span>'
+                  : `<button class="btn btn-outline btn-sm" onclick="finishShift('${s.id}')">結束班次</button>`}
+              </div>
+            </div>
+            ${!s.finished ? `
+              <div class="task-actions" style="margin-top:8px">
+                <button class="btn btn-danger btn-sm" onclick="deleteShift('${s.id}')">刪除</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderReports() {
+      // Summary
+      const allFinished = history.concat(shifts.filter(s => s.finished));
+      const totalShifts = allFinished.length;
+      let totalTasks = 0, totalDone = 0, totalPass = 0, totalFail = 0;
+      allFinished.forEach(s => {
+        s.tasks.forEach(t => {
+          totalTasks++;
+          if (t.completed) totalDone++;
+          if (t.aiStatus === 'pass') totalPass++;
+          if (t.aiStatus === 'fail') totalFail++;
+        });
+      });
+      const avgPct = totalTasks ? Math.round(totalDone / totalTasks * 100) : 0;
+
+      document.getElementById('report-summary').innerHTML = `
+        <div class="report-item"><div class="big">${totalShifts}</div><div class="lbl">歷史班次數</div></div>
+        <div class="report-item"><div class="big">${avgPct}%</div><div class="lbl">平均完成率</div></div>
+        <div class="report-item"><div class="big">${totalPass}</div><div class="lbl">AI 通過次數</div></div>
+        <div class="report-item"><div class="big" style="color:var(--danger)">${totalFail}</div><div class="lbl">AI 異常次數</div></div>
+      `;
+
+      // History list
+      const histEl = document.getElementById('report-history');
+      if (allFinished.length === 0) {
+        histEl.innerHTML = `<div class="empty-state" style="padding:20px"><div class="icon">📜</div>尚無歷史紀錄<br>結束班次後會出現在這裡</div>`;
+        return;
+      }
+      histEl.innerHTML = allFinished.slice().reverse().map(s => {
+        const done = s.tasks.filter(t => t.completed).length;
+        const total = s.tasks.length;
+        const pct = total ? Math.round(done/total*100) : 0;
+        const fails = s.tasks.filter(t => t.aiStatus === 'fail').length;
+        return `
+          <div class="history-item">
+            <div>
+              <strong>${escapeHtml(s.name)}</strong><br>
+              <span style="color:var(--muted);font-size:0.75rem">${s.date}</span>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:700;color:var(--primary-dark)">${pct}%</div>
+              <div style="font-size:0.75rem;color:var(--muted)">${done}/${total}${fails ? ` · ⚠️${fails}` : ''}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateProgress(shift) {
+      if (!shift) {
+        document.getElementById('progress-percent').textContent = '0%';
+        document.getElementById('progress-fill').style.width = '0%';
+        document.getElementById('done-count').textContent = 0;
+        document.getElementById('total-count').textContent = 0;
+        document.getElementById('stat-pass').textContent = 0;
+        document.getElementById('stat-fail').textContent = 0;
+        document.getElementById('stat-photo').textContent = 0;
+        return;
+      }
+      const total = shift.tasks.length;
+      const done = shift.tasks.filter(t => t.completed).length;
+      const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+      const photoTasks = shift.tasks.filter(t => t.requirePhoto).length;
+      const pass = shift.tasks.filter(t => t.aiStatus === 'pass').length;
+      const fail = shift.tasks.filter(t => t.aiStatus === 'fail').length;
+
+      document.getElementById('progress-percent').textContent = percent + '%';
+      document.getElementById('progress-fill').style.width = percent + '%';
+      document.getElementById('done-count').textContent = done;
+      document.getElementById('total-count').textContent = total;
+      document.getElementById('stat-pass').textContent = pass;
+      document.getElementById('stat-fail').textContent = fail;
+      document.getElementById('stat-photo').textContent = photoTasks;
+    }
+
+    // ========== Pet ==========
+    function showPetMessage(type) {
+      const msgs = PET_MESSAGES[type] || PET_MESSAGES.start;
+      const msg = msgs[Math.floor(Math.random() * msgs.length)];
+      const bubble = document.getElementById('pet-bubble');
+      const pet = document.getElementById('pet');
+      bubble.textContent = msg;
+      bubble.classList.add('show');
+      if (type === 'complete' || type === 'pass' || type === 'progress') {
+        pet.classList.remove('sad');
+        pet.classList.add('happy');
+        setTimeout(() => pet.classList.remove('happy'), 700);
+      } else if (type === 'fail') {
+        pet.classList.remove('happy');
+        pet.classList.add('sad');
+        setTimeout(() => pet.classList.remove('sad'), 600);
+      }
+      clearTimeout(window._petTimer);
+      window._petTimer = setTimeout(() => bubble.classList.remove('show'), 4000);
+    }
+
+    function updatePet() {
+      const shift = getCurrentShift();
+      if (!shift) return;
+      const total = shift.tasks.length;
+      const done = shift.tasks.filter(t => t.completed).length;
+      if (total > 0 && done === total) {
+        document.getElementById('pet').textContent = '😸';
+      } else if (done > 0) {
+        document.getElementById('pet').textContent = '😺';
+      } else {
+        document.getElementById('pet').textContent = '🐱';
+      }
+    }
+
+    // ========== Staff Actions ==========
+    function selectShift(id) {
+      currentShiftId = id;
+      saveData();
+      render();
+    }
+
+    function toggleComplete(id, checked) {
+      const shift = getCurrentShift();
+      if (!shift) return;
+      const t = shift.tasks.find(x => x.id === id);
+      if (!t) return;
+      const photos = Array.isArray(t.photos) ? t.photos : (t.photoData ? [t.photoData] : []);
+      if (t.requirePhoto && photos.length === 0) {
+        alert('此任務需先上傳照片並通過 AI 檢視才能勾選完成');
+        render();
+        return;
+      }
+      if (t.requirePhoto && t.aiStatus === 'fail') {
+        if (!confirm('此任務 AI 判定有異常，仍要標記為完成嗎？')) {
+          render();
+          return;
+        }
+      }
+      t.completed = checked;
+      if (checked) {
+        t.completedBy = getCurrentStaffName();
+        t.completedAt = new Date().toISOString();
+      } else {
+        t.completedBy = null;
+        t.completedAt = null;
+      }
+      saveData();
+      render();
+      if (checked) {
+        const done = shift.tasks.filter(x => x.completed).length;
+        if (done === shift.tasks.length) showPetMessage('complete');
+        else if (done / shift.tasks.length > 0.7) showPetMessage('almost');
+        else showPetMessage('progress');
+      }
+    }
+
+    function handlePhoto(id, input) {
+      const files = Array.from(input.files || []);
+      if (files.length === 0) return;
+      const shift = getCurrentShift();
+      if (!shift) return;
+      const t = shift.tasks.find(x => x.id === id);
+      if (!t) return;
+
+      // ensure photos array exists
+      if (!Array.isArray(t.photos)) {
+        t.photos = t.photoData ? [t.photoData] : [];
+        delete t.photoData;
+      }
+
+      let loaded = 0;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          t.photos.push(e.target.result);
+          loaded++;
+          if (loaded === files.length) {
+            // reset AI status when new photos added
+            t.aiStatus = null;
+            t.aiMessage = '';
+            t.completed = false;
+            saveData();
+            render();
+            // 上傳後自動開始 AI 異常檢視
+            setTimeout(() => runAICheck(id), 300);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function removePhoto(id, index) {
+      const shift = getCurrentShift();
+      if (!shift) return;
+      const t = shift.tasks.find(x => x.id === id);
+      if (!t) return;
+      if (!Array.isArray(t.photos)) {
+        t.photos = t.photoData ? [t.photoData] : [];
+        delete t.photoData;
+      }
+      t.photos.splice(index, 1);
+      t.aiStatus = null;
+      t.aiMessage = '';
+      t.completed = false;
+      saveData();
+      render();
+    }
+
+    // ========== AI (Mock + Real instruction) ==========
+    /**
+     * 目前為模擬 AI。正式環境請替換成真實 Vision API。
+     * 範例（OpenAI）：
+     * async function runAICheck(id) {
+     *   const shift = getCurrentShift();
+     *   const t = shift.tasks.find(x => x.id === id);
+     *   // show loading...
+     *   const base64 = t.photoData.split(',')[1];
+     *   const res = await fetch('https://your-backend.com/ai-check', {
+     *     method: 'POST',
+     *     headers: { 'Content-Type': 'application/json' },
+     *     body: JSON.stringify({ image: base64, taskTitle: t.title, taskDesc: t.desc })
+     *   });
+     *   const data = await res.json(); // { pass: bool, reason: string }
+     *   t.aiStatus = data.pass ? 'pass' : 'fail';
+     *   t.aiMessage = data.reason;
+     *   if (data.pass) t.completed = true;
+     *   saveData(); render();
+     * }
+     */
+    async function runAICheck(id) {
+      const shift = getCurrentShift();
+      if (!shift) return;
+      const t = shift.tasks.find(x => x.id === id);
+      const photos = Array.isArray(t.photos) ? t.photos : (t.photoData ? [t.photoData] : []);
+      if (!t || photos.length === 0) return;
+
+      // loading UI
+      const card = document.querySelector(`[data-id="${id}"]`);
+      if (card) {
+        const area = card.querySelector('.photo-area');
+        let loading = area.querySelector('.ai-result');
+        if (!loading) {
+          loading = document.createElement('div');
+          loading.className = 'ai-result';
+          area.appendChild(loading);
+        }
+        loading.className = 'ai-result show loading';
+        loading.innerHTML = geminiApiKey
+          ? `🤖 Gemini 真實 AI 正在分析 ${photos.length} 張照片...`
+          : `🤖 模擬 AI 正在分析 ${photos.length} 張照片...`;
+      }
+
+      try {
+        let results;
+        if (geminiApiKey) {
+          results = await callGeminiAI(t, photos);
+        } else {
+          // fallback to mock
+          await new Promise(r => setTimeout(r, 1200 + Math.random() * 800));
+          results = generateMockAIResult(t);
+        }
+
+        t.aiStatus = results.status;
+        t.aiMessage = results.message + (photos.length > 1 ? `（共檢視 ${photos.length} 張）` : '');
+        if (results.status === 'pass') {
+          t.completed = true;
+          t.completedBy = getCurrentStaffName();
+          t.completedAt = new Date().toISOString();
+          showPetMessage('pass');
+        } else {
+          showPetMessage('fail');
+        }
+        saveData();
+        render();
+        if (shift.tasks.every(x => x.completed)) showPetMessage('complete');
+      } catch (err) {
+        console.error('AI 分析失敗:', err);
+        if (card) {
+          const area = card.querySelector('.photo-area');
+          let loading = area.querySelector('.ai-result');
+          if (loading) {
+            loading.className = 'ai-result show fail';
+            loading.innerHTML = '⚠️ AI 分析失敗：' + (err.message || '請檢查 API Key 或網路');
+          }
+        }
+      }
+    }
+
+    async function callGeminiAI(task, photos) {
+      // 最多送 4 張，避免太大
+      const imagesToSend = photos.slice(0, 4);
+      const parts = [
+        {
+          text: `你是超商稽核人員。請根據以下任務要求，判斷這些照片是否合格。
+
+任務名稱：${task.title}
+任務說明：${task.desc || '無'}
+任務分類：${task.category}
+
+請仔細看照片內容，判斷是否符合任務要求。
+只回傳純 JSON，不要其他文字或 markdown：
+{"pass": true或false, "reason": "用繁體中文簡短說明判斷理由"}`
+        }
+      ];
+
+      imagesToSend.forEach(img => {
+        const base64 = img.includes(',') ? img.split(',')[1] : img;
+        parts.push({
+          inline_data: {
+            mime_type: 'image/jpeg',
+            data: base64
+          }
+        });
+      });
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts }]
+          })
+        }
+      );
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error('Gemini API 錯誤 (' + res.status + ')');
+      }
+
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const jsonMatch = text.match(/\{[\s\S]*?\}/);
+      if (!jsonMatch) {
+        // 如果解析失敗，把原文當 reason
+        return { status: 'fail', message: 'AI 回覆無法解析：' + text.slice(0, 80) };
+      }
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        status: parsed.pass ? 'pass' : 'fail',
+        message: parsed.reason || (parsed.pass ? '通過' : '未通過')
+      };
+    }
+
+    function generateMockAIResult(task) {
+      const pass = Math.random() > 0.28;
+      const reasons = {
+        '開店': {
+          pass: '溫度顯示正常，設備狀態良好。',
+          fail: '偵測到溫度顯示可能超出標準範圍，或畫面模糊無法清楚讀取。請重新拍攝或立即處理。'
+        },
+        '補貨': {
+          pass: '陳列整齊，貨架填充度良好，價格標籤清晰。',
+          fail: '偵測到貨架有明顯空缺或商品排列不整齊，建議立即補貨並整理陳列面。'
+        },
+        '清潔': {
+          pass: '地面與環境看起來乾淨整潔，無明顯髒污。',
+          fail: '偵測到地面有明顯水漬、垃圾或髒污，請重新清潔後再上傳。'
+        },
+        '打烊': {
+          pass: '打烊檢查項目看起來已完成。',
+          fail: '偵測到可能有設備未關閉或門窗狀態異常，請再次確認。'
+        },
+        '其他': {
+          pass: '照片符合任務要求。',
+          fail: '照片內容可能與任務要求不符或品質不足，請重新拍攝。'
+        }
+      };
+      const cat = reasons[task.category] || reasons['其他'];
+      return { status: pass ? 'pass' : 'fail', message: pass ? cat.pass : cat.fail };
+    }
+
+    function saveGeminiKey() {
+      const key = document.getElementById('gemini-api-key').value.trim();
+      geminiApiKey = key;
+      saveData();
+      const msg = document.getElementById('gemini-key-msg');
+      msg.style.display = 'block';
+      if (key) {
+        msg.style.color = 'var(--success)';
+        msg.textContent = '✅ API Key 已儲存，現在上傳照片會使用真實 Gemini AI';
+      } else {
+        msg.style.color = 'var(--muted)';
+        msg.textContent = '已清除 API Key，將使用模擬 AI';
+      }
+      setTimeout(() => { msg.style.display = 'none'; }, 4000);
+    }
+
+    // ========== Manager Actions ==========
+    function openAddModal() {
+      editingId = null;
+      document.getElementById('modal-title').textContent = '新增任務';
+      document.getElementById('task-title').value = '';
+      document.getElementById('task-desc').value = '';
+      document.getElementById('task-category').value = '開店';
+      document.getElementById('task-require-photo').checked = false;
+      document.getElementById('modal').classList.add('show');
+    }
+
+    function editTask(id) {
+      const t = taskTemplates.find(x => x.id === id);
+      if (!t) return;
+      editingId = id;
+      document.getElementById('modal-title').textContent = '編輯任務';
+      document.getElementById('task-title').value = t.title;
+      document.getElementById('task-desc').value = t.desc || '';
+      document.getElementById('task-category').value = t.category;
+      document.getElementById('task-require-photo').checked = t.requirePhoto;
+      document.getElementById('modal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('show');
+    }
+
+    function saveTask() {
+      const title = document.getElementById('task-title').value.trim();
+      if (!title) { alert('請輸入任務名稱'); return; }
+      const desc = document.getElementById('task-desc').value.trim();
+      const category = document.getElementById('task-category').value;
+      const requirePhoto = document.getElementById('task-require-photo').checked;
+
+      if (editingId) {
+        const t = taskTemplates.find(x => x.id === editingId);
+        if (t) {
+          t.title = title; t.desc = desc; t.category = category; t.requirePhoto = requirePhoto;
+        }
+        // also update active shifts that still have the old template version
+        shifts.forEach(s => {
+          if (s.finished) return;
+          const st = s.tasks.find(x => x.id === editingId);
+          if (st) {
+            st.title = title; st.desc = desc; st.category = category; st.requirePhoto = requirePhoto;
+            if (!requirePhoto) { st.photos = []; st.photoData = null; st.aiStatus = null; st.aiMessage = ''; }
+          }
+        });
+      } else {
+        const newT = {
+          id: 't' + Date.now(),
+          title, desc, category, requirePhoto
+        };
+        taskTemplates.push(newT);
+        // add to active shifts
+        shifts.forEach(s => {
+          if (!s.finished) {
+            s.tasks.push({ ...newT, completed: false, photos: [], aiStatus: null, aiMessage: '' });
+          }
+        });
+      }
+      saveData();
+      closeModal();
+      render();
+    }
+
+    function deleteTask(id) {
+      if (!confirm('確定要刪除此任務模板嗎？進行中的班次也會移除對應任務。')) return;
+      taskTemplates = taskTemplates.filter(t => t.id !== id);
+      shifts.forEach(s => {
+        if (!s.finished) s.tasks = s.tasks.filter(t => t.id !== id);
+      });
+      saveData();
+      render();
+    }
+
+    // Shifts
+    function openShiftModal() {
+      document.getElementById('shift-name').value = '';
+      document.getElementById('shift-date').value = new Date().toISOString().slice(0,10);
+      document.getElementById('shift-modal').classList.add('show');
+    }
+    function closeShiftModal() {
+      document.getElementById('shift-modal').classList.remove('show');
+    }
+    function saveShift() {
+      const name = document.getElementById('shift-name').value.trim();
+      if (!name) { alert('請輸入班次名稱'); return; }
+      const date = document.getElementById('shift-date').value || new Date().toISOString().slice(0,10);
+      const shift = createShiftObject(name, date);
+      shifts.push(shift);
+      currentShiftId = shift.id;
+      saveData();
+      closeShiftModal();
+      render();
+      showPetMessage('start');
+    }
+    function finishShift(id) {
+      if (!confirm('結束此班次後，完成狀態會存入歷史報表，且無法再修改。確定嗎？')) return;
+      const s = shifts.find(x => x.id === id);
+      if (!s) return;
+      s.finished = true;
+      history.push(JSON.parse(JSON.stringify(s)));
+      // remove from active if needed, or keep for display
+      if (currentShiftId === id) {
+        const active = shifts.find(x => !x.finished);
+        currentShiftId = active ? active.id : null;
+      }
+      saveData();
+      render();
+      showPetMessage('complete');
+    }
+    function deleteShift(id) {
+      if (!confirm('確定刪除此班次？')) return;
+      shifts = shifts.filter(s => s.id !== id);
+      if (currentShiftId === id) {
+        const active = shifts.find(x => !x.finished);
+        currentShiftId = active ? active.id : null;
+      }
+      saveData();
+      render();
+    }
+
+    function changePassword() {
+      const oldPw = document.getElementById('old-password').value;
+      const newPw = document.getElementById('new-password').value;
+      const confirmPw = document.getElementById('confirm-password').value;
+      const msgEl = document.getElementById('pw-change-msg');
+
+      if (oldPw !== managerPassword) {
+        msgEl.style.display = 'block';
+        msgEl.style.color = 'var(--danger)';
+        msgEl.textContent = '目前密碼不正確';
+        return;
+      }
+      if (newPw.length < 4) {
+        msgEl.style.display = 'block';
+        msgEl.style.color = 'var(--danger)';
+        msgEl.textContent = '新密碼至少需要 4 個字元';
+        return;
+      }
+      if (newPw !== confirmPw) {
+        msgEl.style.display = 'block';
+        msgEl.style.color = 'var(--danger)';
+        msgEl.textContent = '兩次輸入的新密碼不一致';
+        return;
+      }
+      managerPassword = newPw;
+      saveData();
+      document.getElementById('old-password').value = '';
+      document.getElementById('new-password').value = '';
+      document.getElementById('confirm-password').value = '';
+      msgEl.style.display = 'block';
+      msgEl.style.color = 'var(--success)';
+      msgEl.textContent = '密碼已成功更新！';
+      setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
+    }
+
+    // ========== Multi-store ==========
+    function renderStoreSelect() {
+      const btn = document.getElementById('store-btn');
+      const picker = document.getElementById('store-picker');
+      const current = storeList.find(s => s.id === currentStoreId);
+      if (btn) btn.textContent = '🏪 ' + (current ? current.name : '預設店舖');
+      if (picker) {
+        picker.innerHTML = storeList.map(s =>
+          `<div onclick="pickStore('${s.id}')" style="padding:14px 16px;border-bottom:1px solid #eee;font-size:0.95rem;font-weight:600;color:#1a1a1a;cursor:pointer;background:${s.id === currentStoreId ? '#e8f5e9' : '#fff'};">
+            ${s.id === currentStoreId ? '✓ ' : ''}${escapeHtml(s.name)}
+          </div>`
+        ).join('');
+      }
+    }
+
+    function toggleStorePicker() {
+      const picker = document.getElementById('store-picker');
+      const staffPicker = document.getElementById('staff-picker');
+      if (staffPicker) staffPicker.style.display = 'none';
+      if (!picker) return;
+      picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+      renderStoreSelect();
+    }
+
+    function pickStore(id) {
+      document.getElementById('store-picker').style.display = 'none';
+      switchStore(id);
+    }
+
+    function switchStore(storeId) {
+      if (!storeId || storeId === currentStoreId) return;
+      // 1. 先把目前這間店的資料存好
+      history = cleanOldHistory(history);
+      localStorage.setItem(getStoreKey(), JSON.stringify({
+        taskTemplates, shifts, history, currentShiftId, managerPassword, geminiApiKey
+      }));
+      // 2. 切換到新店舖
+      currentStoreId = storeId;
+      localStorage.setItem('cs_current_store', currentStoreId);
+      managerUnlocked = false;
+      currentRole = 'staff';
+      // 3. 載入新店的資料
+      const saved = localStorage.getItem(getStoreKey());
+      if (saved) {
+        const data = JSON.parse(saved);
+        taskTemplates = data.taskTemplates || [];
+        shifts = data.shifts || [];
+        history = cleanOldHistory(data.history || []);
+        currentShiftId = data.currentShiftId || null;
+        if (data.managerPassword) managerPassword = data.managerPassword;
+        if (data.geminiApiKey) geminiApiKey = data.geminiApiKey;
+      } else {
+        // 全新的店：建立預設任務與早/晚/夜班
+        taskTemplates = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+        const today = new Date().toISOString().slice(0,10);
+        shifts = [
+          createShiftObject('早班', today),
+          createShiftObject('晚班', today),
+          createShiftObject('夜班', today)
+        ];
+        currentShiftId = shifts[0].id;
+        history = [];
+        localStorage.setItem(getStoreKey(), JSON.stringify({
+          taskTemplates, shifts, history, currentShiftId, managerPassword, geminiApiKey
+        }));
+      }
+      if (!currentShiftId && shifts.length) currentShiftId = shifts[0].id;
+      renderStoreSelect();
+      renderStaffSelect();
+      switchRole('staff');
+      showPetMessage('start');
+    }
+
+    function openStoreModal() {
+      document.getElementById('store-name').value = '';
+      document.getElementById('store-code').value = '';
+      document.getElementById('store-modal').classList.add('show');
+    }
+
+    function closeStoreModal() {
+      document.getElementById('store-modal').classList.remove('show');
+    }
+
+    function saveNewStore() {
+      const name = document.getElementById('store-name').value.trim();
+      if (!name) { alert('請輸入店舖名稱'); return; }
+      const code = document.getElementById('store-code').value.trim();
+      const id = code || ('store_' + Date.now());
+      if (storeList.find(s => s.id === id)) {
+        alert('此店舖代碼已存在，請換一個');
+        return;
+      }
+      storeList.push({ id, name });
+      saveStoreList();
+      closeStoreModal();
+      switchStore(id);
+    }
+
+    function deleteStore(storeId) {
+      if (storeList.length <= 1) {
+        alert('至少要保留一間店舖');
+        return;
+      }
+      const s = storeList.find(x => x.id === storeId);
+      if (!s) return;
+      if (!confirm(`確定要刪除「${s.name}」嗎？此店的任務與歷史資料也會一併清除。`)) return;
+
+      // 清除該店資料
+      localStorage.removeItem('cs_app_v2_' + storeId);
+      storeList = storeList.filter(x => x.id !== storeId);
+      if (currentStoreId === storeId) {
+        currentStoreId = storeList[0].id;
+        loadData();
+      }
+      saveStoreList();
+      renderStoreSelect();
+      render();
+    }
+
+    function renderStaffSelect() {
+      const btn = document.getElementById('staff-btn');
+      const picker = document.getElementById('staff-picker');
+      const current = staffList.find(s => s.id === currentStaffId);
+      if (btn) btn.textContent = '👤 ' + (current ? current.name : '未指定');
+      if (picker) {
+        picker.innerHTML = staffList.map(s =>
+          `<div onclick="pickStaff('${s.id}')" style="padding:14px 16px;border-bottom:1px solid #eee;font-size:0.95rem;font-weight:600;color:#1a1a1a;cursor:pointer;background:${s.id === currentStaffId ? '#e8f5e9' : '#fff'};">
+            ${s.id === currentStaffId ? '✓ ' : ''}${escapeHtml(s.name)}
+          </div>`
+        ).join('');
+      }
+    }
+
+    function toggleStaffPicker() {
+      const picker = document.getElementById('staff-picker');
+      const storePicker = document.getElementById('store-picker');
+      if (storePicker) storePicker.style.display = 'none';
+      if (!picker) return;
+      picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+      renderStaffSelect();
+    }
+
+    function pickStaff(id) {
+      document.getElementById('staff-picker').style.display = 'none';
+      switchStaff(id);
+    }
+
+    function switchStaff(staffId) {
+      if (!staffId) return;
+      currentStaffId = staffId;
+      localStorage.setItem('cs_current_staff', currentStaffId);
+      localStorage.setItem('cs_staff_list', JSON.stringify(staffList));
+      renderStaffSelect();
+    }
+
+    function openStaffModal() {
+      document.getElementById('staff-name').value = '';
+      document.getElementById('staff-modal').classList.add('show');
+    }
+
+    function closeStaffModal() {
+      document.getElementById('staff-modal').classList.remove('show');
+    }
+
+    function saveNewStaff() {
+      const name = document.getElementById('staff-name').value.trim();
+      if (!name) { alert('請輸入姓名'); return; }
+      // 避免重複姓名
+      if (staffList.find(s => s.name === name)) {
+        alert('已有相同姓名，請換一個或直接選擇');
+        return;
+      }
+      const id = 'staff_' + Date.now();
+      staffList.push({ id, name });
+      currentStaffId = id;
+      saveStoreList();
+      closeStaffModal();
+      renderStaffSelect();
+    }
+
+    function deleteStaff(staffId) {
+      if (staffList.length <= 1) {
+        alert('至少要保留一位人員');
+        return;
+      }
+      const s = staffList.find(x => x.id === staffId);
+      if (!s) return;
+      if (!confirm(`確定要刪除「${s.name}」嗎？`)) return;
+
+      staffList = staffList.filter(x => x.id !== staffId);
+      if (currentStaffId === staffId) {
+        currentStaffId = staffList[0].id;
+      }
+      saveStoreList();
+      renderStaffSelect();
+      render();
+    }
+
+    function getCurrentStaffName() {
+      const s = staffList.find(x => x.id === currentStaffId);
+      return s ? s.name : '未指定';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Init
+    loadData();
+    renderStoreSelect();
+    renderStaffSelect();
+    render();
+    setTimeout(() => showPetMessage('start'), 600);
+  </script>
+</body>
+</html>
