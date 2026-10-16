@@ -551,7 +551,17 @@
 <body>
   <div class="header">
     <h1>🏪 超商工作完成度</h1>
-    <div class="sub">任務追蹤 · 照片 AI 檢視 · 多班次 · 小寵物鼓勵</div>
+    <div class="sub">任務追蹤 · 照片 AI 檢視 · 多店共用 · 資料保存6個月</div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+      <select id="store-select" onchange="switchStore(this.value)" style="flex:1;padding:6px 10px;border-radius:8px;border:none;font-size:0.85rem;font-weight:600;background:rgba(255,255,255,0.95);color:#333;">
+      </select>
+      <button onclick="openStoreModal()" style="background:rgba(255,255,255,0.25);border:none;color:white;padding:6px 10px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;">＋店</button>
+    </div>
+    <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
+      <select id="staff-select" onchange="switchStaff(this.value)" style="flex:1;padding:6px 10px;border-radius:8px;border:none;font-size:0.85rem;font-weight:600;background:rgba(255,255,255,0.95);color:#333;">
+      </select>
+      <button onclick="openStaffModal()" style="background:rgba(255,255,255,0.25);border:none;color:white;padding:6px 10px;border-radius:8px;font-size:0.8rem;font-weight:600;cursor:pointer;">＋人</button>
+    </div>
     <div class="role-switch">
       <button id="btn-staff" class="active" onclick="switchRole('staff')">夥伴模式</button>
       <button id="btn-manager" onclick="tryEnterManager()">管理者模式</button>
@@ -752,6 +762,52 @@
     </div>
   </div>
 
+  <!-- Store Modal -->
+  <div class="modal-overlay" id="store-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>新增店舖</h2>
+        <button class="close-btn" onclick="closeStoreModal()">×</button>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">
+        每間店的資料獨立保存，可在上方切換。資料自動保留 6 個月。
+      </p>
+      <div class="form-group">
+        <label>店舖名稱 *</label>
+        <input type="text" id="store-name" placeholder="例如：中壢中正店">
+      </div>
+      <div class="form-group">
+        <label>店舖代碼（選填，方便識別）</label>
+        <input type="text" id="store-code" placeholder="例如：TY-001">
+      </div>
+      <div style="margin-top:18px;display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closeStoreModal()">取消</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveNewStore()">建立</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Staff Modal -->
+  <div class="modal-overlay" id="staff-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>新增人員</h2>
+        <button class="close-btn" onclick="closeStaffModal()">×</button>
+      </div>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px;">
+        新增夥伴名單，完成任務時會記錄是誰操作的。
+      </p>
+      <div class="form-group">
+        <label>姓名 *</label>
+        <input type="text" id="staff-name" placeholder="例如：小明">
+      </div>
+      <div style="margin-top:18px;display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1" onclick="closeStaffModal()">取消</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveNewStaff()">建立</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Password Modal -->
   <div class="modal-overlay" id="password-modal">
     <div class="modal">
@@ -809,15 +865,59 @@
     let managerTab = 'tasks';
     let managerUnlocked = false;     // session unlock
     let managerPassword = 'admin123'; // default, can be changed
+    let currentStoreId = 'default';   // multi-store support
+    let storeList = [{ id: 'default', name: '預設店舖' }];
+    let currentStaffId = 'default';
+    let staffList = [{ id: 'default', name: '未指定' }];
+    const DATA_RETENTION_DAYS = 180; // 資料保存 6 個月
 
-    // ========== Persistence ==========
+    // ========== Persistence (multi-store + 6 months retention) ==========
+    function getStoreKey() {
+      return 'cs_app_v2_' + currentStoreId;
+    }
+
+    function cleanOldHistory(hist) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - DATA_RETENTION_DAYS);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      return (hist || []).filter(h => h.date >= cutoffStr);
+    }
+
+    function loadStoreList() {
+      const saved = localStorage.getItem('cs_store_list');
+      if (saved) {
+        storeList = JSON.parse(saved);
+      }
+      const lastStore = localStorage.getItem('cs_current_store');
+      if (lastStore && storeList.find(s => s.id === lastStore)) {
+        currentStoreId = lastStore;
+      }
+      // staff list
+      const savedStaff = localStorage.getItem('cs_staff_list');
+      if (savedStaff) {
+        staffList = JSON.parse(savedStaff);
+      }
+      const lastStaff = localStorage.getItem('cs_current_staff');
+      if (lastStaff && staffList.find(s => s.id === lastStaff)) {
+        currentStaffId = lastStaff;
+      }
+    }
+
+    function saveStoreList() {
+      localStorage.setItem('cs_store_list', JSON.stringify(storeList));
+      localStorage.setItem('cs_current_store', currentStoreId);
+      localStorage.setItem('cs_staff_list', JSON.stringify(staffList));
+      localStorage.setItem('cs_current_staff', currentStaffId);
+    }
+
     function loadData() {
-      const saved = localStorage.getItem('cs_app_v2');
+      loadStoreList();
+      const saved = localStorage.getItem(getStoreKey());
       if (saved) {
         const data = JSON.parse(saved);
         taskTemplates = data.taskTemplates || [];
         shifts = data.shifts || [];
-        history = data.history || [];
+        history = cleanOldHistory(data.history || []);
         currentShiftId = data.currentShiftId || null;
         if (data.managerPassword) managerPassword = data.managerPassword;
       } else {
@@ -829,15 +929,19 @@
         const night = createShiftObject('夜班', today);
         shifts.push(morning, evening, night);
         currentShiftId = morning.id;
+        history = [];
         saveData();
       }
       if (!currentShiftId && shifts.length) currentShiftId = shifts[0].id;
     }
 
     function saveData() {
-      localStorage.setItem('cs_app_v2', JSON.stringify({
+      // 自動清除超過 6 個月的歷史資料
+      history = cleanOldHistory(history);
+      localStorage.setItem(getStoreKey(), JSON.stringify({
         taskTemplates, shifts, history, currentShiftId, managerPassword
       }));
+      saveStoreList();
     }
 
     function createShiftObject(name, date) {
@@ -849,7 +953,7 @@
         tasks: taskTemplates.map(t => ({
           ...t,
           completed: false,
-          photoData: null,
+          photos: [],
           aiStatus: null,
           aiMessage: ''
         }))
@@ -947,13 +1051,22 @@
 
       list.innerHTML = shift.tasks.map(t => {
         const photoRequired = t.requirePhoto;
-        const hasPhoto = !!t.photoData;
+        // support both old single photoData and new photos array
+        const photos = Array.isArray(t.photos) ? t.photos : (t.photoData ? [t.photoData] : []);
+        const hasPhoto = photos.length > 0;
         let aiHtml = '';
         if (photoRequired && t.aiStatus) {
           const cls = t.aiStatus === 'pass' ? 'pass' : 'fail';
           const icon = t.aiStatus === 'pass' ? '✅' : '⚠️';
           aiHtml = `<div class="ai-result show ${cls}">${icon} ${t.aiMessage}</div>`;
         }
+
+        const photoPreviews = photos.map((src, idx) =>
+          `<div style="position:relative;display:inline-block;margin:4px 4px 0 0;">
+            <img class="photo-preview show" src="${src}" alt="照片${idx+1}" style="width:90px;height:90px;object-fit:cover;border-radius:8px;">
+            <button onclick="removePhoto('${t.id}',${idx})" style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#e53935;color:white;border:none;font-size:12px;cursor:pointer;line-height:1;">×</button>
+          </div>`
+        ).join('');
 
         return `
           <div class="card task-item" data-id="${t.id}">
@@ -967,6 +1080,7 @@
                 <div class="task-tags">
                   <span class="tag">${t.category}</span>
                   ${photoRequired ? '<span class="tag photo">📷 需拍照</span>' : ''}
+                  ${hasPhoto ? `<span class="tag photo">${photos.length} 張照片</span>` : ''}
                   ${t.aiStatus === 'pass' ? '<span class="tag pass">AI 通過</span>' : ''}
                   ${t.aiStatus === 'fail' ? '<span class="tag anomaly">AI 異常</span>' : ''}
                 </div>
@@ -975,16 +1089,10 @@
             ${photoRequired ? `
               <div class="photo-area">
                 <label class="file-input-label">
-                  📷 ${hasPhoto ? '重新上傳照片' : '上傳照片'}
-                  <input type="file" accept="image/*" capture="environment" onchange="handlePhoto('${t.id}', this)">
+                  📷 ${hasPhoto ? '繼續新增照片' : '上傳照片（可多張）'}
+                  <input type="file" accept="image/*" capture="environment" multiple onchange="handlePhoto('${t.id}', this)">
                 </label>
-                <img class="photo-preview ${hasPhoto ? 'show' : ''}" id="preview-${t.id}"
-                     src="${t.photoData || ''}" alt="預覽">
-                ${hasPhoto && !t.aiStatus ? `
-                  <button class="btn btn-primary btn-sm" style="margin-top:6px" onclick="runAICheck('${t.id}')">
-                    🤖 開始 AI 異常檢視
-                  </button>
-                ` : ''}
+                <div style="margin-top:6px;">${photoPreviews}</div>
                 ${aiHtml}
               </div>
             ` : ''}
@@ -1193,7 +1301,8 @@
       if (!shift) return;
       const t = shift.tasks.find(x => x.id === id);
       if (!t) return;
-      if (t.requirePhoto && !t.photoData) {
+      const photos = Array.isArray(t.photos) ? t.photos : (t.photoData ? [t.photoData] : []);
+      if (t.requirePhoto && photos.length === 0) {
         alert('此任務需先上傳照片並通過 AI 檢視才能勾選完成');
         render();
         return;
@@ -1205,6 +1314,13 @@
         }
       }
       t.completed = checked;
+      if (checked) {
+        t.completedBy = getCurrentStaffName();
+        t.completedAt = new Date().toISOString();
+      } else {
+        t.completedBy = null;
+        t.completedAt = null;
+      }
       saveData();
       render();
       if (checked) {
@@ -1216,22 +1332,55 @@
     }
 
     function handlePhoto(id, input) {
-      const file = input.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const shift = getCurrentShift();
-        if (!shift) return;
-        const t = shift.tasks.find(x => x.id === id);
-        if (!t) return;
-        t.photoData = e.target.result;
-        t.aiStatus = null;
-        t.aiMessage = '';
-        t.completed = false;
-        saveData();
-        render();
-      };
-      reader.readAsDataURL(file);
+      const files = Array.from(input.files || []);
+      if (files.length === 0) return;
+      const shift = getCurrentShift();
+      if (!shift) return;
+      const t = shift.tasks.find(x => x.id === id);
+      if (!t) return;
+
+      // ensure photos array exists
+      if (!Array.isArray(t.photos)) {
+        t.photos = t.photoData ? [t.photoData] : [];
+        delete t.photoData;
+      }
+
+      let loaded = 0;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          t.photos.push(e.target.result);
+          loaded++;
+          if (loaded === files.length) {
+            // reset AI status when new photos added
+            t.aiStatus = null;
+            t.aiMessage = '';
+            t.completed = false;
+            saveData();
+            render();
+            // 上傳後自動開始 AI 異常檢視
+            setTimeout(() => runAICheck(id), 300);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function removePhoto(id, index) {
+      const shift = getCurrentShift();
+      if (!shift) return;
+      const t = shift.tasks.find(x => x.id === id);
+      if (!t) return;
+      if (!Array.isArray(t.photos)) {
+        t.photos = t.photoData ? [t.photoData] : [];
+        delete t.photoData;
+      }
+      t.photos.splice(index, 1);
+      t.aiStatus = null;
+      t.aiMessage = '';
+      t.completed = false;
+      saveData();
+      render();
     }
 
     // ========== AI (Mock + Real instruction) ==========
@@ -1259,7 +1408,8 @@
       const shift = getCurrentShift();
       if (!shift) return;
       const t = shift.tasks.find(x => x.id === id);
-      if (!t || !t.photoData) return;
+      const photos = Array.isArray(t.photos) ? t.photos : (t.photoData ? [t.photoData] : []);
+      if (!t || photos.length === 0) return;
 
       // loading UI
       const card = document.querySelector(`[data-id="${id}"]`);
@@ -1272,15 +1422,17 @@
           area.appendChild(loading);
         }
         loading.className = 'ai-result show loading';
-        loading.innerHTML = '🤖 AI 正在分析照片中...';
+        loading.innerHTML = `🤖 AI 正在分析 ${photos.length} 張照片中...`;
       }
 
       setTimeout(() => {
         const results = generateMockAIResult(t);
         t.aiStatus = results.status;
-        t.aiMessage = results.message;
+        t.aiMessage = results.message + (photos.length > 1 ? `（共檢視 ${photos.length} 張）` : '');
         if (results.status === 'pass') {
           t.completed = true;
+          t.completedBy = getCurrentStaffName();
+          t.completedAt = new Date().toISOString();
           showPetMessage('pass');
         } else {
           showPetMessage('fail');
@@ -1365,7 +1517,7 @@
           const st = s.tasks.find(x => x.id === editingId);
           if (st) {
             st.title = title; st.desc = desc; st.category = category; st.requirePhoto = requirePhoto;
-            if (!requirePhoto) { st.photoData = null; st.aiStatus = null; st.aiMessage = ''; }
+            if (!requirePhoto) { st.photos = []; st.photoData = null; st.aiStatus = null; st.aiMessage = ''; }
           }
         });
       } else {
@@ -1377,7 +1529,7 @@
         // add to active shifts
         shifts.forEach(s => {
           if (!s.finished) {
-            s.tasks.push({ ...newT, completed: false, photoData: null, aiStatus: null, aiMessage: '' });
+            s.tasks.push({ ...newT, completed: false, photos: [], aiStatus: null, aiMessage: '' });
           }
         });
       }
@@ -1478,6 +1630,91 @@
       setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
     }
 
+    // ========== Multi-store ==========
+    function renderStoreSelect() {
+      const sel = document.getElementById('store-select');
+      if (!sel) return;
+      sel.innerHTML = storeList.map(s =>
+        `<option value="${s.id}" ${s.id === currentStoreId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`
+      ).join('');
+    }
+
+    function switchStore(storeId) {
+      if (storeId === currentStoreId) return;
+      saveData(); // save current before switch
+      currentStoreId = storeId;
+      managerUnlocked = false;
+      currentRole = 'staff';
+      loadData();
+      renderStoreSelect();
+      switchRole('staff');
+      showPetMessage('start');
+    }
+
+    function openStoreModal() {
+      document.getElementById('store-name').value = '';
+      document.getElementById('store-code').value = '';
+      document.getElementById('store-modal').classList.add('show');
+    }
+
+    function closeStoreModal() {
+      document.getElementById('store-modal').classList.remove('show');
+    }
+
+    function saveNewStore() {
+      const name = document.getElementById('store-name').value.trim();
+      if (!name) { alert('請輸入店舖名稱'); return; }
+      const code = document.getElementById('store-code').value.trim();
+      const id = code || ('store_' + Date.now());
+      if (storeList.find(s => s.id === id)) {
+        alert('此店舖代碼已存在');
+        return;
+      }
+      storeList.push({ id, name });
+      saveStoreList();
+      closeStoreModal();
+      switchStore(id);
+    }
+
+    function renderStaffSelect() {
+      const sel = document.getElementById('staff-select');
+      if (!sel) return;
+      sel.innerHTML = staffList.map(s =>
+        `<option value="${s.id}" ${s.id === currentStaffId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`
+      ).join('');
+    }
+
+    function switchStaff(staffId) {
+      currentStaffId = staffId;
+      saveStoreList();
+      renderStaffSelect();
+    }
+
+    function openStaffModal() {
+      document.getElementById('staff-name').value = '';
+      document.getElementById('staff-modal').classList.add('show');
+    }
+
+    function closeStaffModal() {
+      document.getElementById('staff-modal').classList.remove('show');
+    }
+
+    function saveNewStaff() {
+      const name = document.getElementById('staff-name').value.trim();
+      if (!name) { alert('請輸入姓名'); return; }
+      const id = 'staff_' + Date.now();
+      staffList.push({ id, name });
+      currentStaffId = id;
+      saveStoreList();
+      closeStaffModal();
+      renderStaffSelect();
+    }
+
+    function getCurrentStaffName() {
+      const s = staffList.find(x => x.id === currentStaffId);
+      return s ? s.name : '未指定';
+    }
+
     function escapeHtml(str) {
       if (!str) return '';
       return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1485,6 +1722,8 @@
 
     // Init
     loadData();
+    renderStoreSelect();
+    renderStaffSelect();
     render();
     setTimeout(() => showPetMessage('start'), 600);
   </script>
