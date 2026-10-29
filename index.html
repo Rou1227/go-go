@@ -37,8 +37,22 @@
     }
 
     const profile = await liff.getProfile();
-    console.log("LINE 使用者 ID：", profile.userId);
-    console.log("LINE 顯示名稱：", profile.displayName);
+console.log("LINE 使用者 ID：", profile.userId);
+console.log("LINE 顯示名稱：", profile.displayName);
+
+const info = document.createElement("div");
+info.style.cssText =
+  "padding:16px;margin:16px;background:#f0f8ff;color:#222;border-radius:8px;word-break:break-all;";
+
+const idText = document.createElement("p");
+idText.textContent = "LINE 使用者 ID：" + profile.userId;
+
+const nameText = document.createElement("p");
+nameText.textContent = "LINE 顯示名稱：" + profile.displayName;
+
+info.appendChild(idText);
+info.appendChild(nameText);
+document.body.appendChild(info);
   }
 
   initLINE();
