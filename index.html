@@ -55,7 +55,13 @@ info.appendChild(nameText);
 document.body.appendChild(info);
   }
 
-  initLINE();
+  initLINE().catch(function(error) {
+    const msg = document.createElement("p");
+    msg.textContent = "LINE 初始化失敗：" + error.message;
+    msg.style.cssText =
+      "padding:16px;color:red;background:#fff0f0;word-break:break-word;";
+    document.body.appendChild(msg);
+  });
 </script>
     
     body {
